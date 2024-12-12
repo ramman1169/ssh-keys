@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Variables
-GITHUB_KEYS_URL="https://raw.githubusercontent.com/yourusername/yourrepo/main/authorized_keys"
-GITHUB_CHECKSUM_URL="https://raw.githubusercontent.com/yourusername/yourrepo/main/authorized_keys.sha256"
+GITHUB_KEYS_URL="https://raw.githubusercontent.com/ramman1169/ssh-keys/main/authorized_keys"
+GITHUB_CHECKSUM_URL="https://raw.githubusercontent.com/ramman1169/ssh-keys/main/authorized_keys.sha256"
 LOCAL_KEYS_FILE="$HOME/.ssh/authorized_keys"
 TEMP_KEYS_FILE="/tmp/authorized_keys"
 TEMP_CHECKSUM_FILE="/tmp/authorized_keys.sha256"
