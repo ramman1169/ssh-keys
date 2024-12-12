@@ -1,13 +1,15 @@
 #!/bin/bash
 
 # Variables
-GITHUB_KEYS_URL="https://raw.githubusercontent.com/yourusername/yourrepo/main/authorized_keys"
-GITHUB_CHECKSUM_URL="https://raw.githubusercontent.com/yourusername/yourrepo/main/authorized_keys.sha256"
+GITHUB_KEYS_URL="https://raw.githubusercontent.com/ramman1169/ssh-keys/main/authorized_keys"
+GITHUB_CHECKSUM_URL="https://raw.githubusercontent.com/ramman1169/ssh-keys/main/authorized_keys.sha256"
 LOCAL_KEYS_FILE="$HOME/.ssh/authorized_keys"
 TEMP_KEYS_FILE="/tmp/authorized_keys"
 TEMP_CHECKSUM_FILE="/tmp/authorized_keys.sha256"
-SECTION_START="####### Place keys Below this line. They will be overwritten! ########"
+SECTION_START="####### Below this line ########"
 SECTION_END="####### Above this line ########"
+SCRIPT_PATH="$(realpath "$0")"  # Path to this script
+CRON_JOB="@hourly $SCRIPT_PATH"
 
 # Ensure necessary directories exist
 mkdir -p "$HOME/.ssh"
@@ -25,12 +27,14 @@ fi
 
 # Validate checksum
 echo "Validating checksum..."
-CHECKSUM_VALID=$(sha256sum -c "$TEMP_CHECKSUM_FILE" 2>/dev/null)
+EXPECTED_CHECKSUM=$(cat /tmp/authorized_keys.sha256)
+ACTUAL_CHECKSUM=$(sha256sum /tmp/authorized_keys | awk '{print $1}')
 
-if [[ "$CHECKSUM_VALID" != "$TEMP_KEYS_FILE: OK" ]]; then
-  echo "Error: Checksum validation failed."
-  rm -f "$TEMP_KEYS_FILE" "$TEMP_CHECKSUM_FILE"
-  exit 1
+if [[ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]]; then
+    echo "Error: Checksum mismatch!"
+    exit 1
+else
+    echo "Checksum validated successfully."
 fi
 
 # Prepare the new section content
@@ -61,3 +65,14 @@ chmod 600 "$LOCAL_KEYS_FILE"
 rm -f "$TEMP_KEYS_FILE" "$TEMP_CHECKSUM_FILE"
 
 echo "authorized_keys file successfully updated."
+
+# Ensure a cron job exists to run this script hourly
+echo "Ensuring cron job exists..."
+CRON_EXISTS=$(crontab -l 2>/dev/null | grep -F "$SCRIPT_PATH")
+
+if [[ -z "$CRON_EXISTS" ]]; then
+  echo "Adding cron job to run the script every hour."
+  (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+else
+  echo "Cron job already exists."
+fi
