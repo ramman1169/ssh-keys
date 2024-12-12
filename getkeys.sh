@@ -25,12 +25,14 @@ fi
 
 # Validate checksum
 echo "Validating checksum..."
-CHECKSUM_VALID=$(sha256sum -c "$TEMP_CHECKSUM_FILE" 2>/dev/null)
+EXPECTED_CHECKSUM=$(cat /tmp/authorized_keys.sha256)
+ACTUAL_CHECKSUM=$(sha256sum /tmp/authorized_keys | awk '{print $1}')
 
-if [[ "$CHECKSUM_VALID" != "$TEMP_KEYS_FILE: OK" ]]; then
-  echo "Error: Checksum validation failed."
-  rm -f "$TEMP_KEYS_FILE" "$TEMP_CHECKSUM_FILE"
-  exit 1
+if [[ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]]; then
+    echo "Error: Checksum mismatch!"
+    exit 1
+else
+    echo "Checksum validated successfully."
 fi
 
 # Prepare the new section content
