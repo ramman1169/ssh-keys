@@ -8,9 +8,20 @@ TEMP_KEYS_FILE="/tmp/authorized_keys"
 TEMP_CHECKSUM_FILE="/tmp/authorized_keys.sha256"
 SECTION_START="####### Place keys Below this line. They will be overwritten! ########"
 SECTION_END="####### Above this line ########"
+SCRIPT_DIR="/root/scripts"
+SCRIPT_NAME="update_authorized_keys.sh"
+SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_NAME"
 
 # Ensure necessary directories exist
 mkdir -p "/root/.ssh"
+mkdir -p "$SCRIPT_DIR"
+
+# Copy the script to /root/scripts
+if [[ "$(realpath "$0")" != "$SCRIPT_PATH" ]]; then
+  echo "Copying script to $SCRIPT_PATH"
+  cp "$0" "$SCRIPT_PATH"
+  chmod 700 "$SCRIPT_PATH"
+fi
 
 # Download the authorized_keys file and checksum from GitHub
 echo "Downloading authorized_keys and checksum from GitHub..."
@@ -78,6 +89,16 @@ fi
 # Set secure permissions
 chmod 600 "$ROOT_KEYS_FILE"
 chown root:root "$ROOT_KEYS_FILE"
+
+# Add a cron job to run the script every hour
+echo "Ensuring cron job exists..."
+CRON_JOB="@hourly $SCRIPT_PATH"
+if ! crontab -l 2>/dev/null | grep -Fq "$SCRIPT_PATH"; then
+  (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+  echo "Cron job added: $CRON_JOB"
+else
+  echo "Cron job already exists."
+fi
 
 # Cleanup
 rm -f "$TEMP_KEYS_FILE" "$TEMP_CHECKSUM_FILE"
