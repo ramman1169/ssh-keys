@@ -37,27 +37,39 @@ else
   echo "Checksum validated successfully."
 fi
 
-# Backup the root authorized_keys file
-if [[ -f "$ROOT_KEYS_FILE" ]]; then
-  cp "$ROOT_KEYS_FILE" "${ROOT_KEYS_FILE}.bak"
+# Prepare the new section content
+NEW_KEYS_CONTENT=$(cat "$TEMP_KEYS_FILE")
+
+# Read or create the root authorized_keys file if it doesn't exist
+if [[ ! -f "$ROOT_KEYS_FILE" ]]; then
+  echo "Root authorized_keys file not found. Creating a new one."
+  echo -e "$SECTION_START\n$NEW_KEYS_CONTENT\n$SECTION_END" > "$ROOT_KEYS_FILE"
+  chmod 600 "$ROOT_KEYS_FILE"
+  chown root:root "$ROOT_KEYS_FILE"
+  echo "Root authorized_keys file successfully created."
+  exit 0
 fi
 
-# Merge the content of the files
-echo "Merging content into root authorized_keys file..."
-awk -v start="$SECTION_START" -v end="$SECTION_END" -v newkeys="$(cat "$TEMP_KEYS_FILE")" '
-  BEGIN { inside = 0 }
-  FNR == NR { original_lines[FNR] = $0; next }
-  $0 == start { 
-    print; inside = 1; 
-    print newkeys; 
-    next 
-  }
-  $0 == end { inside = 0 }
-  !inside { print }
-' "$ROOT_KEYS_FILE" /dev/null > "${ROOT_KEYS_FILE}.tmp"
+# Backup the root authorized_keys file
+cp "$ROOT_KEYS_FILE" "${ROOT_KEYS_FILE}.bak"
 
-# Move the updated file into place
-mv "${ROOT_KEYS_FILE}.tmp" "$ROOT_KEYS_FILE"
+# Replace the section within the file or append if markers are missing
+echo "Updating section within root authorized_keys..."
+awk -v start="$SECTION_START" -v end="$SECTION_END" -v newkeys="$NEW_KEYS_CONTENT" '
+  BEGIN { inside = 0; replaced = 0 }
+  $0 == start { 
+    print; inside = 1; replaced = 1; print newkeys; next 
+  }
+  $0 == end { 
+    inside = 0 
+  }
+  !inside { print }
+  END {
+    if (replaced == 0) {
+      print start; print newkeys; print end
+    }
+  }
+' "$ROOT_KEYS_FILE" > "${ROOT_KEYS_FILE}.tmp" && mv "${ROOT_KEYS_FILE}.tmp" "$ROOT_KEYS_FILE"
 
 # Set secure permissions
 chmod 600 "$ROOT_KEYS_FILE"
