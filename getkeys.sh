@@ -39,35 +39,41 @@ fi
 
 # Prepare the new section content
 NEW_KEYS_CONTENT=$(cat "$TEMP_KEYS_FILE")
-
-# Read or create the root authorized_keys file if it doesn't exist
-if [[ ! -f "$ROOT_KEYS_FILE" ]]; then
-  echo "Root authorized_keys file not found. Creating a new one."
-  echo -e "$SECTION_START\n$NEW_KEYS_CONTENT\n$SECTION_END" > "$ROOT_KEYS_FILE"
-  chmod 600 "$ROOT_KEYS_FILE"
-  chown root:root "$ROOT_KEYS_FILE"
-  echo "Root authorized_keys file successfully created."
-  exit 0
+if [[ -z "$NEW_KEYS_CONTENT" ]]; then
+  echo "Error: Downloaded authorized_keys file is empty."
+  exit 1
 fi
 
-# Backup the root authorized_keys file
-cp "$ROOT_KEYS_FILE" "${ROOT_KEYS_FILE}.bak"
+# Check if the file exists and has content
+if [[ ! -s "$ROOT_KEYS_FILE" ]]; then
+  # File does not exist or is empty; create a new one with markers
+  echo "Root authorized_keys file is missing or empty. Creating a new one."
+  echo -e "$SECTION_START\n$NEW_KEYS_CONTENT\n$SECTION_END" > "$ROOT_KEYS_FILE"
+else
+  # Backup the root authorized_keys file
+  cp "$ROOT_KEYS_FILE" "${ROOT_KEYS_FILE}.bak"
 
-# Replace the section within the file
-echo "Updating section within root authorized_keys..."
-awk -v start="$SECTION_START" -v end="$SECTION_END" -v newkeys="$NEW_KEYS_CONTENT" '
-  BEGIN { inside = 0 }
-  $0 == start { 
-    print start; print newkeys; inside = 1; next 
-  }
-  $0 == end && inside == 1 { 
-    print end; inside = 0; next 
-  }
-  !inside { print }
-' "$ROOT_KEYS_FILE" > "${ROOT_KEYS_FILE}.tmp"
+  # Replace the section within the file
+  echo "Updating section within root authorized_keys..."
+  awk -v start="$SECTION_START" -v end="$SECTION_END" -v newkeys="$NEW_KEYS_CONTENT" '
+    BEGIN { inside = 0; replaced = 0 }
+    $0 == start {
+      print start; print newkeys; inside = 1; replaced = 1; next
+    }
+    $0 == end && inside == 1 {
+      print end; inside = 0; next
+    }
+    !inside { print }
+    END {
+      if (replaced == 0) {
+        print start; print newkeys; print end
+      }
+    }
+  ' "$ROOT_KEYS_FILE" > "${ROOT_KEYS_FILE}.tmp"
 
-# Replace the old file with the updated one
-mv "${ROOT_KEYS_FILE}.tmp" "$ROOT_KEYS_FILE"
+  # Replace the old file with the updated one
+  mv "${ROOT_KEYS_FILE}.tmp" "$ROOT_KEYS_FILE"
+fi
 
 # Set secure permissions
 chmod 600 "$ROOT_KEYS_FILE"
