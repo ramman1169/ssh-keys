@@ -35,6 +35,7 @@ if [[ "$EXPECTED_CHECKSUM" != "$ACTUAL_CHECKSUM" ]]; then
   exit 1
 else
   echo "Checksum validated successfully."
+  rm -f /tmp/authorized_keys*
 fi
 
 # Prepare the new section content
