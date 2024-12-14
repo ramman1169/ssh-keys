@@ -11,6 +11,7 @@ SECTION_END="####### Above this line ########"
 SCRIPT_DIR="/root/scripts"
 SCRIPT_NAME="update_authorized_keys.sh"
 SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_NAME"
+CRON_HOURLY_SCRIPT="/etc/cron.hourly/update_authorized_keys"
 
 # Ensure necessary directories exist
 mkdir -p "/root/.ssh"
@@ -21,6 +22,15 @@ if [[ "$(realpath "$0")" != "$SCRIPT_PATH" ]]; then
   echo "Copying script to $SCRIPT_PATH"
   cp "$0" "$SCRIPT_PATH"
   chmod 700 "$SCRIPT_PATH"
+fi
+
+# Add the script to /etc/cron.hourly
+if [[ "$(realpath "$0")" != "$CRON_HOURLY_SCRIPT" ]]; then
+  echo "Adding script to /etc/cron.hourly"
+  cp "$SCRIPT_PATH" "$CRON_HOURLY_SCRIPT"
+  chmod 700 "$CRON_HOURLY_SCRIPT"
+else
+  echo "Script is already in /etc/cron.hourly."
 fi
 
 # Download the authorized_keys file and checksum from GitHub
@@ -89,16 +99,6 @@ fi
 # Set secure permissions
 chmod 600 "$ROOT_KEYS_FILE"
 chown root:root "$ROOT_KEYS_FILE"
-
-# Add a cron job to run the script every hour
-echo "Ensuring cron job exists..."
-CRON_JOB="@hourly $SCRIPT_PATH"
-if ! crontab -l 2>/dev/null | grep -Fq "$SCRIPT_PATH"; then
-  (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-  echo "Cron job added: $CRON_JOB"
-else
-  echo "Cron job already exists."
-fi
 
 # Cleanup
 rm -f "$TEMP_KEYS_FILE" "$TEMP_CHECKSUM_FILE"
