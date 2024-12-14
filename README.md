@@ -1,8 +1,6 @@
-This is the master support authorized_keys file for your machines...
 
+*The purpose of this is to keep ssh keys in sync across your network. After running this script, the machines will pull a copy of this authorized_keys file and over-write the local copy.
 
-This file will get pulled from a bash script that re-writes the local authorized_keys file...
-
-Add your keys to authorized_keys, the run the following command to get the checksum
+Add your keys to authorized_keys, then run the following command to put the checksum in the correct file...
 
 sha256sum authorized_keys | awk '{print $1}' > authorized_keys.sha256
