@@ -53,23 +53,21 @@ fi
 # Backup the root authorized_keys file
 cp "$ROOT_KEYS_FILE" "${ROOT_KEYS_FILE}.bak"
 
-# Replace the section within the file or append if markers are missing
+# Replace the section within the file
 echo "Updating section within root authorized_keys..."
 awk -v start="$SECTION_START" -v end="$SECTION_END" -v newkeys="$NEW_KEYS_CONTENT" '
-  BEGIN { inside = 0; replaced = 0 }
+  BEGIN { inside = 0 }
   $0 == start { 
-    print; inside = 1; replaced = 1; print newkeys; next 
+    print start; print newkeys; inside = 1; next 
   }
-  $0 == end { 
-    inside = 0 
+  $0 == end && inside == 1 { 
+    print end; inside = 0; next 
   }
   !inside { print }
-  END {
-    if (replaced == 0) {
-      print start; print newkeys; print end
-    }
-  }
-' "$ROOT_KEYS_FILE" > "${ROOT_KEYS_FILE}.tmp" && mv "${ROOT_KEYS_FILE}.tmp" "$ROOT_KEYS_FILE"
+' "$ROOT_KEYS_FILE" > "${ROOT_KEYS_FILE}.tmp"
+
+# Replace the old file with the updated one
+mv "${ROOT_KEYS_FILE}.tmp" "$ROOT_KEYS_FILE"
 
 # Set secure permissions
 chmod 600 "$ROOT_KEYS_FILE"
