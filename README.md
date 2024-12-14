@@ -4,5 +4,4 @@
 Add your keys to authorized_keys, then run the following command to put the checksum in the correct file...
 
 ## SYNTAX
-# edit the authorized_keys file
-# sha256sum authorized_keys | awk '{print $1}' > authorized_keys.sha256
+edit the authorized_keys file and the run "sha256sum authorized_keys | awk '{print $1}' > authorized_keys.sha256"
